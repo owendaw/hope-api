@@ -1,20 +1,17 @@
-from database import connection
+import logging
 from database import total_db, station_db
 
 
-def fetch_stations():
+async def fetch_stations(conn):
     print("Fetching All Stations...")
-    if not connection.open:
-        connection.ping(reconnect=True)
-
-    with connection:
-        with connection.cursor() as cursor:
-            sql_string = "SELECT stationId, piSerial FROM hydrostations"
-            cursor.execute(sql_string)
-            result = cursor.fetchall()
+    async with conn.cursor() as cursor:
+        sql_string = "SELECT stationId, piSerial FROM hydrostations"
+        await cursor.execute(sql_string)
+        result = await cursor.fetchall()
 
     print("Success")
     print("Adding Stations to station_db...")
+
     for station in result:
         station_id = station["stationId"]
         # If there is a new station, add it to our total_db
@@ -30,41 +27,33 @@ def fetch_stations():
     return
 
 
-def update_count(payload: dict):
-    total_db["total_count"] += payload["quantity"]
-    station_id = station_db[payload["piSerial"]]
-    total_db[station_id] += payload["quantity"]
+async def update_count(payload: dict):
+    try:
+        total_db["total_count"] += payload["quantity"]
+        station_id = station_db[payload["piSerial"]]
+        total_db[station_id] += payload["quantity"]
+    except Exception as e:
+        logging.error(f"Error in update_count: {e}")
     return
 
 
-def update_db_server(payload: dict):
+async def update_db_server(conn, payload: dict):
     """
     This function sends our payload to the MySQL DB server and adds a row to the Refills table
     :param payload:
     :return: bool
     """
-
-    if not connection.open:
-        connection.ping(reconnect=True)
-
-    with connection:
-        with connection.cursor() as cursor:
+    try:
+        async with conn.cursor() as cursor:
             placeholders = ', '.join(['%s'] * len(payload))
             columns = ', '.join(payload.keys())
-            # data_values = ', '.join(payload.values())
             sql_string = "INSERT INTO refills (%s) VALUES (%s)" % (columns, placeholders)
-            cursor.execute(sql_string, list(payload.values()))
-
-        connection.commit()
-        # Add some error handeling here
-    # if cursor.rowcount == 1:
-    #     return True
-    # else:
-    #     return False
-    return
+            await cursor.execute(sql_string, list(payload.values()))
+    except Exception as e:
+        logging.error(f"Error in update_db_server: {e}")
 
 
-def get_station_count(station_id: int):
+async def get_station_count(station_id: int):
     if station_id == 0:
         return total_db["total_count"]
 
