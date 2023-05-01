@@ -1,21 +1,32 @@
-from pymysql import connect
-from pymysql.cursors import DictCursor
+import aiomysql
 from sqlitedict import SqliteDict
+from contextlib import asynccontextmanager
+from aiomysql import DictCursor
 
-user = "hydrostation_api"
-password = ""
-# host = "hydrostation-public-db-1.canw8fprhd3c.us-east-1.rds.amazonaws.com"
-host = "hydrostation-private-db-1.canw8fprhd3c.us-east-1.rds.amazonaws.com"
 
-port = 3306
-database = "hydrostation"
+@asynccontextmanager
+async def get_connection():
+    user = "hydrostation-api"
+    password = ""
+    host = "hydrostation-private-db-1.canw8fprhd3c.us-east-1.rds.amazonaws.com"
+    port = 3306
+    database = "hydrostation"
 
-connection = connect(host=host,
-                     port=port,
-                     user=user,
-                     password=password,
-                     database=database,
-                     cursorclass=DictCursor)
+    conn = await aiomysql.connect(
+        host=host,
+        port=port,
+        user=user,
+        password=password,
+        db=database,
+        autocommit=True,
+        cursorclass=DictCursor
+    )
+
+    try:
+        yield conn
+    finally:
+        conn.close()
+
 
 total_db = SqliteDict("data_store/local_db", autocommit=True, tablename="total_db")
 station_db = SqliteDict("data_store/station_db", autocommit=True, tablename="station_db")
