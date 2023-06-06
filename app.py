@@ -37,9 +37,10 @@ async def get_station_flow(station_id: int):
 
 
 @app.post("/v1/flow/refill", response_model=RefillOut)
-async def add_refill(request: Refill, background_tasks: BackgroundTasks, conn: aiomysql.Connection = Depends(get_connection)):
+async def add_refill(request: Refill, background_tasks: BackgroundTasks):
+
     # Send Data to MySQL DB Server
-    background_tasks.add_task(update_db_server, conn, request.dict())
+    background_tasks.add_task(update_db_server, request.dict())
 
     # Send Data to Local DB
     background_tasks.add_task(update_count, request.dict())

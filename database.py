@@ -6,8 +6,8 @@ from aiomysql import DictCursor
 
 @asynccontextmanager
 async def get_connection():
-    user = "hydrostation-api"
-    password = ""
+    user = "admin"
+    password = "ForOurFuture95!"
     host = "hydrostation-private-db-1.canw8fprhd3c.us-east-1.rds.amazonaws.com"
     port = 3306
     database = "hydrostation"

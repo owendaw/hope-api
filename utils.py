@@ -1,5 +1,5 @@
 import logging
-from database import total_db, station_db
+from database import total_db, station_db, get_connection
 
 
 async def fetch_stations(conn):
@@ -37,20 +37,23 @@ async def update_count(payload: dict):
     return
 
 
-async def update_db_server(conn, payload: dict):
+async def update_db_server(payload: dict):
     """
     This function sends our payload to the MySQL DB server and adds a row to the Refills table
     :param payload:
     :return: bool
     """
-    try:
-        async with conn.cursor() as cursor:
+    async with get_connection() as conn:
+        cursor = await conn.cursor()
+        try:
             placeholders = ', '.join(['%s'] * len(payload))
             columns = ', '.join(payload.keys())
             sql_string = "INSERT INTO refills (%s) VALUES (%s)" % (columns, placeholders)
             await cursor.execute(sql_string, list(payload.values()))
-    except Exception as e:
-        logging.error(f"Error in update_db_server: {e}")
+        except Exception as e:
+            print(f"Failed to update database. Error: {e}")
+        finally:
+            await cursor.close()
 
 
 async def get_station_count(station_id: int):
